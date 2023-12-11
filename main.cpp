@@ -144,48 +144,64 @@ Signing sign_message(BigNumber p, BigNumber g, BigNumber m, BigNumber a) {
     BigNumber p_minus_one = p-1;
     BigNumber k = generate_random_number(2,p_minus_one);
     BigNumber inversed_k = boost::integer::mod_inverse(k, p_minus_one);
-    while(inversed_k == 0) {
-        k = generate_random_number(2,p_minus_one);
-        inversed_k = boost::integer::mod_inverse(k, p_minus_one);
-    }
+    std::cout<<"p-1: "<<p_minus_one<<std::endl;
+    std::cout<<"k: "<<k<<std::endl;
+    std::cout<<"k^-1: "<<inversed_k<<std::endl;
     BigNumber r = mod_pow(g, k ,p);
-
+    std::cout<<"r: "<<r<<std::endl;
     std::string H = sha256( boost::multiprecision::to_string(m));
+    std::cout<<"Hash:"<<H<<std::endl;
     BigNumber numbered_hash = hex_to_bn(H);
-    BigNumber s = (numbered_hash - a*r) * inversed_k % p_minus_one;
+    std::cout<<"H: "<<numbered_hash<<std::endl;
+    BigNumber test = (numbered_hash - a*r) * inversed_k;
+    BigNumber s = ((numbered_hash - a*r) * inversed_k) % p_minus_one;
+    std::cout<<"s: "<<s<<std::endl;
     return {r,s};
 }
 BigNumber verificate_message(BigNumber b, BigNumber p, BigNumber m, BigNumber s, BigNumber r, BigNumber g) {
     BigNumber y = boost::integer::mod_inverse(b, p);
+    if(y == 0 ) std::cerr<<"y is 0"<<std::endl;
+    std::cout<<"y: "<<y<<std::endl;
     BigNumber p_minus_one = p-1;
     std::string H = sha256( boost::multiprecision::to_string(m));
     BigNumber inverted_s = boost::integer::mod_inverse(s, p_minus_one);
+    std::cout<<"s^-1: "<<inverted_s<<std::endl;
+    if(inverted_s == 0 ) std::cerr<<"inverted s is 0"<<std::endl;
     BigNumber numbered_hash = hex_to_bn(H);
     BigNumber u_one = (numbered_hash * inverted_s)%p_minus_one;
+    std::cout<<"u1: "<<u_one<<std::endl;
     BigNumber u_two = (r * inverted_s)%p_minus_one;
+    std::cout<<"u2: "<<u_two<<std::endl;
     BigNumber v = (pow(g, u_one) * pow(y, u_two))%p;
+    std::cout<<"v: "<<v<<std::endl;
     return v;
 }
 Encrypted encrypt_message(BigNumber g, BigNumber b, BigNumber m, BigNumber p) {
     BigNumber k = generate_random_number(1, 100);
     BigNumber x = mod_pow(g, k, p);
     BigNumber y = (pow(b, k) * m)%p;
+
     return {x,y};
 }
 BigNumber decrypt_message(Encrypted encrypted_info, BigNumber a, BigNumber p) {
     BigNumber s = mod_pow(encrypted_info.x,a,p);
-    BigNumber inversed_s = boost::integer::mod_inverse(s, p);
-    BigNumber m = (encrypted_info.y * inversed_s) % p;
+    BigNumber inverted_s = boost::integer::mod_inverse(s, p);
+    BigNumber m = (encrypted_info.y * inverted_s) % p;
     return m;
 }
 int main() {
-    BigNumber p = 15000;
+    BigNumber p = 1000;
+    std::cout<<"p: "<<p<<std::endl;
     BigNumber m = 2311;
+    std::cout<<"m: "<<m<<std::endl;
     std::vector<BigNumber> roots = find_primitive_roots(p);
-    BigNumber g = roots[1];
+    BigNumber g = roots[5];
+    std::cout<<"g: "<<g<<std::endl;
 
     BigNumber a = generate_private_key(p);
+    std::cout<<"a: "<<a<<std::endl;
     BigNumber b = generate_public_key(g,a,p);
+    std::cout<<"b: "<<b<<std::endl;
 
     Signing signing = sign_message(p, g, m, a);
     BigNumber v = verificate_message(b,p,m,signing.s,signing.r,g);
@@ -194,6 +210,5 @@ int main() {
     BigNumber decrypted = decrypt_message(encrypted_info, a, p);
     bool is_verified = signing.r == v;
     std::cout<<"Verification: "<<is_verified<<std::endl;
-    std::cout<<"Decrypted: "<<decrypted<<std::endl;
     return 0;
 }
