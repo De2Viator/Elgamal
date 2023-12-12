@@ -152,24 +152,31 @@ BigNumber verificate_message(BigNumber b, BigNumber p, std::string m, BigNumber 
     BigNumber v = (pow(g, u_one) * pow(y, u_two))%p;
     return v;
 }
+BigNumber string_to_bn(std::string m) {
+    std::string result;
+    for (char character : m) {
+        result += std::to_string(static_cast<int>(character));
+    }
+    BigNumber result_number(result);
+    return result_number;
+}
 Encrypted encrypt_message(BigNumber g, BigNumber b, BigNumber m, BigNumber p) {
-    BigNumber k = generate_random_number(1, 100);
+    BigNumber k = generate_random_number(1, p-1);
     BigNumber x = mod_pow(g, k, p);
-    BigNumber y = (pow(b, k) * m)%p;
+    BigNumber y = (pow(b, k) * m) %p;
 
     return {x,y};
 }
-BigNumber decrypt_message(Encrypted encrypted_info, BigNumber a, BigNumber p) {
-    BigNumber s = mod_pow(encrypted_info.x,a,p);
+BigNumber decrypt_message(const Encrypted& encrypted_info, BigNumber a, BigNumber p) {
+    BigNumber s = mod_pow(encrypted_info.x,std::move(a),p);
     BigNumber inverted_s = boost::integer::mod_inverse(s, p);
     BigNumber m = (encrypted_info.y * inverted_s) % p;
     return m;
 }
 int main() {
-    BigNumber p = 17;
-    std::string m = "231132323";
-    std::cout<<std::endl;
-    BigNumber g = find_primitive_roots(p)[0];
+    BigNumber p = 171;
+    std::string m = "asdasdasdasdsss";
+    BigNumber g = find_primitive_roots(p)[2];
 
     BigNumber a = generate_private_key(p);
     BigNumber b = generate_public_key(g,a,p);
@@ -177,9 +184,12 @@ int main() {
     Signing signing = sign_message(p, g, m, a);
     BigNumber v = verificate_message(b,p,m,signing.s,signing.r,g);
 
-//    Encrypted encrypted_info = encrypt_message(g,b,m,p);
-//    BigNumber decrypted = decrypt_message(encrypted_info, a, p);
+    BigNumber secret_message = 87;
+    Encrypted encrypted_info = encrypt_message(g,b,secret_message,p);
+    BigNumber decrypted = decrypt_message(encrypted_info, a, p);
+
     bool is_verified = signing.r == v;
     std::cout<<"Verification: "<<is_verified<<std::endl;
+    std::cout<<"Decrypted: "<<decrypted;
     return 0;
 }
